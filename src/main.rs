@@ -1,4 +1,6 @@
 use std::{thread::{current, sleep}, time};
+use rand::Rng;
+use rand::distributions::{Distribution, Uniform};
 
 use minifb::{Key, Window, WindowOptions};
 
@@ -28,7 +30,7 @@ struct Shape {
 }
 
 impl Shape {
-    fn line(left: Block) -> Shape {
+    fn line(left: Block, color: Color) -> Shape {
         return Shape {
             blocks: vec![
                 left.clone(),
@@ -36,11 +38,11 @@ impl Shape {
                 Block{ x: left.x + 2, y: left.y },
                 Block{ x: left.x + 3, y: left.y },
             ],
-            color: 0x770077
+            color: color
         };
     }
 
-    fn square(upperleft: Block) -> Shape {
+    fn square(upperleft: Block, color: Color) -> Shape {
         return Shape {
             blocks: vec![
                 upperleft.clone(),
@@ -48,7 +50,7 @@ impl Shape {
                 Block{ x: upperleft.x, y: upperleft.y + 1 },
                 Block{ x: upperleft.x + 1, y: upperleft.y + 1 },
             ],
-            color: 0x770077
+            color: color
         };
     }
 
@@ -84,6 +86,7 @@ fn main() {
     let mut board: Vec<Color> = vec![0; BOARD_WIDTH * BOARD_HEIGHT];
     let mut buffer: Vec<u32> = vec![0; WINDOW_WIDTH * WINDOW_HEIGHT];
     let mut window = init_window();
+    let mut rng = rand::thread_rng();
 
     set_block(&mut board, Block{ x: 3, y: 7}, 0xff0000);
     set_block(&mut board, Block{ x: 5, y: 5}, 0x00ff00);
@@ -91,7 +94,7 @@ fn main() {
 
     let mut running = true;
 
-    let mut curr_shape: Shape = Shape::square(Block{x: 0, y: 0});
+    let mut curr_shape: Shape = Shape::square(Block{x: 0, y: 0}, rng.gen());
 
     while running {
         render_board(&board, &mut buffer, &curr_shape);
