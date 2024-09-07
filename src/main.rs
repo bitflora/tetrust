@@ -36,10 +36,39 @@ impl Default for Board {
 }
 
 impl Board {
+    const BLANK: Color = 0x000000;
+
+    fn check_rows(&mut self) -> u32 {
+        let mut rows_removed: u32 = 0;
+        let full_row = |board: &Board, row: usize| {
+            for x in 0..BOARD_WIDTH {
+                if ! board.is_filled(x, row) {
+                    return false;
+                }
+            }
+            true
+        };
+        for row in 0..BOARD_HEIGHT {
+            if full_row( &self, row) {
+                // TODO: scoring
+                rows_removed += 1;
+                for x in 0..BOARD_WIDTH {
+                    self.set_block(&Block{x: x, y: row}, Board::BLANK);
+                }
+                for prev_row in (1..=row).rev() {
+                    for x in 0..BOARD_WIDTH {
+                        self.set_block(&Block{x: x, y: prev_row}, self.color_at(x, prev_row-1));
+                    }
+                }
+            }
+        }
+        rows_removed
+    }
     fn emplace(&mut self, shape: &Shape) {
         for b in &shape.blocks {
-            self.set_block(&b, shape.color)
+            self.set_block(&b, shape.color);
         }
+        self.check_rows();
     }
 
     fn set_block(&mut self, b: &Block, val: Color) {
@@ -52,7 +81,7 @@ impl Board {
     }
 
     fn is_filled(&self, x: usize, y: usize) -> bool {
-        self.color_at(x, y) != 0x000000
+        self.color_at(x, y) != Board::BLANK
     }
 
     fn valid_move(&self, block: &Block) -> bool {
@@ -76,6 +105,8 @@ enum ShapeSpecies {
     Hat,
 }
 
+// TODO: Is there a nice way to abstract this out so it can't have invalid states
+//  but easily allows me to increment and decrement?
 type Rotation = u8;
 
 struct Shape {
@@ -92,7 +123,9 @@ fn main() {
     let mut window = init_window();
     let mut rng = rand::thread_rng();
 
-    let top_center = Block{ x: BOARD_WIDTH / 2, y: 0};
+    // I'd prefer to allow the shape to rotate into the negative space,
+    // but then I'd need to change all my types and cast a lot
+    let top_center = Block{ x: BOARD_WIDTH / 2, y: 1};
 
     board.set_block(&Block{ x: 3, y: BOARD_HEIGHT-1}, rng.gen());
     board.set_block(&Block{ x: 5, y: BOARD_HEIGHT-2}, rng.gen());
@@ -112,20 +145,20 @@ fn main() {
                 Key::Escape => {
                     running = false
                 },
-                Key::Up => {
-                    curr_shape.rotate(&board);
+                Key::Up | Key::R => {
+                    curr_shape.rotate_right(&board);
                 },
-                Key::Right => { 
+                Key::Right | Key::D => { 
                     curr_shape.move_right(&board);
                 },
-                Key::Left => {
+                Key::Left | Key::A => {
                     curr_shape.move_left(&board);
                 },
                 Key::Space => {
                     curr_shape.drop(&mut board);
                     curr_shape = Shape::random(&top_center, &mut rng);
                 },
-                Key::Down => {
+                Key::Down | Key::S => {
                     if !curr_shape.move_down(&mut board) {
                         curr_shape = Shape::random(&top_center, &mut rng);
                     }
@@ -268,21 +301,22 @@ impl Shape {
 
     fn blocks_for(species: ShapeSpecies, center: &Block, rotation: Rotation) -> Vec<Block> {
         match species {
-            ShapeSpecies::Line => if rotation % 2 == 0 {
-                vec![
-                    center.clone(),
-                    Block{ x: center.x + 1, y: center.y },
-                    Block{ x: center.x + 2, y: center.y },
-                    Block{ x: center.x + 3, y: center.y },
-                ]
-            } else {
-                vec![
-                    center.clone(),
-                    Block{ x: center.x, y: center.y + 1 },
-                    Block{ x: center.x, y: center.y + 2 },
-                    Block{ x: center.x, y: center.y + 3 },
-                ]
-            },
+            ShapeSpecies::Line => 
+                if rotation % 2 == 0 {
+                    vec![
+                        center.clone(),
+                        Block{ x: center.x + 1, y: center.y },
+                        Block{ x: center.x + 2, y: center.y },
+                        Block{ x: center.x + 3, y: center.y },
+                    ]
+                } else {
+                    vec![
+                        center.clone(),
+                        Block{ x: center.x, y: center.y + 1 },
+                        Block{ x: center.x, y: center.y + 2 },
+                        Block{ x: center.x, y: center.y + 3 },
+                    ]
+                },
             ShapeSpecies::Square =>
                 vec![
                     center.clone(),
@@ -290,34 +324,51 @@ impl Shape {
                     Block{ x: center.x, y: center.y + 1 },
                     Block{ x: center.x + 1, y: center.y + 1 },
                 ],
-            ShapeSpecies::LRight => if rotation == 0 {
-                vec![
-                    Block{ x: center.x - 1, y: center.y + 1 },
-                    Block{ x: center.x, y: center.y + 1 },
-                    Block{ x: center.x + 1, y: center.y + 1 },
-                    Block{ x: center.x + 1, y: center.y },
-                ]
-            } else if rotation == 1 {
-                vec![center.clone()] // TODO
-            } else if rotation == 2 {
-                vec![center.clone()] // TODO
-            } else {
-                vec![center.clone()] // TODO
-            },
-            ShapeSpecies::LLeft => if rotation == 0 {
-                vec![
-                    Block{ x: center.x - 1, y: center.y + 1 },
-                    Block{ x: center.x, y: center.y + 1 },
-                    Block{ x: center.x + 1, y: center.y + 1 },
-                    Block{ x: center.x - 1, y: center.y },
-                ]
-            } else if rotation == 1 {
-                vec![center.clone()] // TODO
-            } else if rotation == 2 {
-                vec![center.clone()] // TODO
-            } else {
-                vec![center.clone()] // TODO
-            },
+            ShapeSpecies::LRight =>
+                if rotation == 0 {
+                    vec![
+                        Block{ x: center.x - 1, y: center.y + 1 },
+                        Block{ x: center.x, y: center.y + 1 },
+                        Block{ x: center.x + 1, y: center.y + 1 },
+                        Block{ x: center.x + 1, y: center.y },
+                    ]
+                } else if rotation == 1 {
+                    vec![
+                        Block{ x: center.x - 1, y: center.y - 1 },
+                        Block{ x: center.x - 1, y: center.y },
+                        Block{ x: center.x - 1, y: center.y + 1 },
+                        Block{ x: center.x, y: center.y + 1 },
+                    ]
+                } else if rotation == 2 {
+                    vec![
+                        Block{ x: center.x - 1, y: center.y - 1 },
+                        Block{ x: center.x, y: center.y - 1 },
+                        Block{ x: center.x + 1, y: center.y - 1 },
+                        Block{ x: center.x - 1, y: center.y },
+                    ]
+                } else {
+                    vec![
+                        Block{ x: center.x + 1, y: center.y - 1 },
+                        Block{ x: center.x + 1, y: center.y },
+                        Block{ x: center.x + 1, y: center.y + 1 },
+                        Block{ x: center.x, y: center.y - 1 },
+                    ]
+                },
+            ShapeSpecies::LLeft => 
+                if rotation == 0 {
+                    vec![
+                        Block{ x: center.x - 1, y: center.y + 1 },
+                        Block{ x: center.x, y: center.y + 1 },
+                        Block{ x: center.x + 1, y: center.y + 1 },
+                        Block{ x: center.x - 1, y: center.y },
+                    ]
+                } else if rotation == 1 {
+                    vec![center.clone()] // TODO
+                } else if rotation == 2 {
+                    vec![center.clone()] // TODO
+                } else {
+                    vec![center.clone()] // TODO
+                },
             ShapeSpecies::SquiggleRight => if rotation % 2 == 0 {
                 vec![
                     Block{ x: center.x - 1, y: center.y },
@@ -355,7 +406,7 @@ impl Shape {
         }
     }
 
-    fn rotate(&mut self, board: &Board) -> bool {
+    fn rotate_right(&mut self, board: &Board) -> bool {
         let new_rot = if self.rotation >= 3 { 0 } else { self.rotation + 1 };
         // TODO: track center separately (and indealy with a pointer)
         let new_blocks = Shape::blocks_for(self.species.clone(), &self.blocks[0], new_rot);
@@ -383,9 +434,7 @@ impl Shape {
     }
 
     fn drop(&mut self, board: &mut Board) {
-        while self.move_down(board) {
-            
-        }
+        while self.move_down(board) { }
     }
 
     fn move_right(&mut self, board: &Board) -> bool {
