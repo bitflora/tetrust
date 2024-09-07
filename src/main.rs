@@ -54,10 +54,18 @@ impl Board {
     fn is_filled(&self, x: usize, y: usize) -> bool {
         self.color_at(x, y) != 0x000000
     }
+
+    fn valid_move(&self, block: &Block) -> bool {
+        return !( block.x < 0 || block.x >= BOARD_WIDTH
+            || block.y < 0 || block.y >= BOARD_HEIGHT
+            || self.is_filled(block.x, block.y))
+    }
 }
 
 
 // TODO: learn more about cool ways to do enum stuff
+
+#[derive(Clone)]
 enum ShapeSpecies {
     Line,
     Square,
@@ -68,165 +76,15 @@ enum ShapeSpecies {
     Hat,
 }
 
+type Rotation = u8;
+
 struct Shape {
     species: ShapeSpecies,
     blocks: Vec<Block>,
     color: Color,
+    rotation: Rotation, // Sure would be nice if I could default this
 }
 
-impl Shape {
-    fn random(start: &Block, rng: &mut ThreadRng) -> Shape {
-        let c: Color = rng.gen();
-        let r = rng.gen_range(0..7);
-        println!("shape: {r}");
-        return match r {
-            0 => Shape::line(&start, c),
-            1 => Shape::square(&start, c),
-            2 => Shape::l_right(&start, c),
-            3 => Shape::l_left(&start, c),
-            4 => Shape::squiggle_right(&start, c),
-            5 => Shape::squiggle_left(&start, c),
-            6 => Shape::hat(&start, c),
-            _ => Shape::line(&start, c),
-        };
-    }
-
-    fn line(center: &Block, color: Color) -> Shape {
-        return Shape {
-            species: ShapeSpecies::Line,
-            blocks: vec![
-                Block{ x: center.x - 1, y: center.y },
-                center.clone(),
-                Block{ x: center.x + 1, y: center.y },
-                Block{ x: center.x + 2, y: center.y },
-            ],
-            color: color
-        };
-    }
-
-    fn square(upperleft: &Block, color: Color) -> Shape {
-        return Shape {
-            species: ShapeSpecies::Square,
-            blocks: vec![
-                upperleft.clone(),
-                Block{ x: upperleft.x + 1, y: upperleft.y },
-                Block{ x: upperleft.x, y: upperleft.y + 1 },
-                Block{ x: upperleft.x + 1, y: upperleft.y + 1 },
-            ],
-            color: color
-        };
-    }
-
-    fn l_right(center: &Block, color: Color) -> Shape {
-        return Shape {
-            species: ShapeSpecies::LRight,
-            blocks: vec![
-                Block{ x: center.x - 1, y: center.y + 1 },
-                Block{ x: center.x, y: center.y + 1 },
-                Block{ x: center.x + 1, y: center.y + 1 },
-                Block{ x: center.x + 1, y: center.y },
-            ],
-            color: color
-        };
-    }
-
-    fn l_left(center: &Block, color: Color) -> Shape {
-        return Shape {
-            species: ShapeSpecies::LLeft,
-            blocks: vec![
-                Block{ x: center.x - 1, y: center.y + 1 },
-                Block{ x: center.x, y: center.y + 1 },
-                Block{ x: center.x + 1, y: center.y + 1 },
-                Block{ x: center.x - 1, y: center.y },
-            ],
-            color: color
-        };
-    }
-
-    fn squiggle_right(center: &Block, color: Color) -> Shape {
-        return Shape {
-            species: ShapeSpecies::SquiggleRight,
-            blocks: vec![
-                Block{ x: center.x - 1, y: center.y },
-                Block{ x: center.x - 1, y: center.y + 1 },
-                Block{ x: center.x, y: center.y + 1 },
-                Block{ x: center.x, y: center.y + 2 },
-            ],
-            color: color
-        };
-    }
-
-    fn squiggle_left(center: &Block, color: Color) -> Shape {
-        return Shape {
-            species: ShapeSpecies::SquiggleLeft,
-            blocks: vec![
-                Block{ x: center.x + 1, y: center.y },
-                Block{ x: center.x + 1, y: center.y + 1 },
-                Block{ x: center.x, y: center.y + 1 },
-                Block{ x: center.x, y: center.y + 2 },
-            ],
-            color: color
-        };
-    }
-
-    fn hat(center: &Block, color: Color) -> Shape {
-        return Shape {
-            species: ShapeSpecies::SquiggleLeft,
-            blocks: vec![
-                center.clone(),
-                Block{ x: center.x - 1, y: center.y + 1 },
-                Block{ x: center.x, y: center.y + 1 },
-                Block{ x: center.x + 1, y: center.y + 1 },
-            ],
-            color: color
-        };
-    }
-
-    fn move_down(&mut self, board: &mut Board) -> bool {
-        for block in &self.blocks {
-            if block.y + 1 >= BOARD_HEIGHT || board.is_filled(block.x, block.y+1) {
-                board.emplace(&self);
-                return false;
-            }
-        }
-        for block in &mut self.blocks {
-            block.y += 1;
-        }
-        true
-    }
-
-    fn drop(&mut self, board: &mut Board) {
-        while self.move_down(board) {
-            
-        }
-    }
-
-    fn move_right(&mut self, board: &Board) -> bool {
-        for block in &self.blocks {
-            if block.x + 1 >= BOARD_WIDTH || board.is_filled(block.x + 1, block.y) {
-                return false;
-            }
-        }
-
-        for block in &mut self.blocks {
-            block.x += 1;
-        }
-        return true;
-    }
-
-    fn move_left(&mut self, board: &Board) -> bool {
-        for block in &self.blocks {
-            if block.x == 0 || board.is_filled(block.x - 1, block.y) {
-                return false;
-            }
-        }
-
-        for block in &mut self.blocks {
-            block.x -= 1;
-        }
-        return true;
-    }
-}
 
 fn main() {
     let mut board: Board = Board::default();
@@ -253,6 +111,9 @@ fn main() {
             match key {
                 Key::Escape => {
                     running = false
+                },
+                Key::Up => {
+                    curr_shape.rotate(&board);
                 },
                 Key::Right => { 
                     curr_shape.move_right(&board);
@@ -321,5 +182,235 @@ fn render_board(board: &Board, buffer: &mut Vec<u32>, curr_shape: &Shape) {
 
     for block in &curr_shape.blocks {
         draw_block(block.x, block.y, curr_shape.color);
+    }
+}
+
+
+impl Shape {
+    fn random(start: &Block, rng: &mut ThreadRng) -> Shape {
+        let c: Color = rng.gen();
+        let r = rng.gen_range(0..7);
+        println!("shape: {r}");
+        return match r {
+            0 => Shape::line(&start, c),
+            1 => Shape::square(&start, c),
+            2 => Shape::l_right(&start, c),
+            3 => Shape::l_left(&start, c),
+            4 => Shape::squiggle_right(&start, c),
+            5 => Shape::squiggle_left(&start, c),
+            6 => Shape::hat(&start, c),
+            _ => Shape::line(&start, c),
+        };
+    }
+
+    fn line(center: &Block, color: Color) -> Shape {
+        return Shape {
+            species: ShapeSpecies::Line,
+            blocks: Shape::blocks_for(ShapeSpecies::Line, center, 0),
+            color: color,
+            rotation: 0,
+        };
+    }
+
+    fn square(upperleft: &Block, color: Color) -> Shape {
+        return Shape {
+            species: ShapeSpecies::Square,
+            blocks: Shape::blocks_for(ShapeSpecies::Square, upperleft, 0),
+            color: color,
+            rotation: 0,
+        };
+    }
+
+    fn l_right(center: &Block, color: Color) -> Shape {
+        return Shape {
+            species: ShapeSpecies::LRight,
+            blocks: Shape::blocks_for(ShapeSpecies::LRight, center, 0),
+            color: color,
+            rotation: 0,
+        };
+    }
+
+    fn l_left(center: &Block, color: Color) -> Shape {
+        return Shape {
+            species: ShapeSpecies::LLeft,
+            blocks: Shape::blocks_for(ShapeSpecies::LLeft, center, 0),
+            color: color,
+            rotation: 0,
+        };
+    }
+
+    fn squiggle_right(center: &Block, color: Color) -> Shape {
+        return Shape {
+            species: ShapeSpecies::SquiggleRight,
+            blocks: Shape::blocks_for(ShapeSpecies::SquiggleRight, center, 0),
+            color: color,
+            rotation: 0,
+        };
+    }
+
+    fn squiggle_left(center: &Block, color: Color) -> Shape {
+        return Shape {
+            species: ShapeSpecies::SquiggleLeft,
+            blocks: Shape::blocks_for(ShapeSpecies::SquiggleLeft, center, 0),
+            color: color,
+            rotation: 0,
+        };
+    }
+
+    fn hat(center: &Block, color: Color) -> Shape {
+        return Shape {
+            species: ShapeSpecies::Hat,
+            blocks: Shape::blocks_for(ShapeSpecies::Hat, center, 0),
+            color: color,
+            rotation: 0,
+        };
+    }
+
+    fn blocks_for(species: ShapeSpecies, center: &Block, rotation: Rotation) -> Vec<Block> {
+        match species {
+            ShapeSpecies::Line => if rotation % 2 == 0 {
+                vec![
+                    center.clone(),
+                    Block{ x: center.x + 1, y: center.y },
+                    Block{ x: center.x + 2, y: center.y },
+                    Block{ x: center.x + 3, y: center.y },
+                ]
+            } else {
+                vec![
+                    center.clone(),
+                    Block{ x: center.x, y: center.y + 1 },
+                    Block{ x: center.x, y: center.y + 2 },
+                    Block{ x: center.x, y: center.y + 3 },
+                ]
+            },
+            ShapeSpecies::Square =>
+                vec![
+                    center.clone(),
+                    Block{ x: center.x + 1, y: center.y },
+                    Block{ x: center.x, y: center.y + 1 },
+                    Block{ x: center.x + 1, y: center.y + 1 },
+                ],
+            ShapeSpecies::LRight => if rotation == 0 {
+                vec![
+                    Block{ x: center.x - 1, y: center.y + 1 },
+                    Block{ x: center.x, y: center.y + 1 },
+                    Block{ x: center.x + 1, y: center.y + 1 },
+                    Block{ x: center.x + 1, y: center.y },
+                ]
+            } else if rotation == 1 {
+                vec![center.clone()] // TODO
+            } else if rotation == 2 {
+                vec![center.clone()] // TODO
+            } else {
+                vec![center.clone()] // TODO
+            },
+            ShapeSpecies::LLeft => if rotation == 0 {
+                vec![
+                    Block{ x: center.x - 1, y: center.y + 1 },
+                    Block{ x: center.x, y: center.y + 1 },
+                    Block{ x: center.x + 1, y: center.y + 1 },
+                    Block{ x: center.x - 1, y: center.y },
+                ]
+            } else if rotation == 1 {
+                vec![center.clone()] // TODO
+            } else if rotation == 2 {
+                vec![center.clone()] // TODO
+            } else {
+                vec![center.clone()] // TODO
+            },
+            ShapeSpecies::SquiggleRight => if rotation % 2 == 0 {
+                vec![
+                    Block{ x: center.x - 1, y: center.y },
+                    Block{ x: center.x - 1, y: center.y + 1 },
+                    Block{ x: center.x, y: center.y + 1 },
+                    Block{ x: center.x, y: center.y + 2 },
+                ]
+            } else {
+                vec![center.clone()] // TODO
+            },
+            ShapeSpecies::SquiggleLeft => if rotation % 2 == 0 {
+                vec![
+                    Block{ x: center.x + 1, y: center.y },
+                    Block{ x: center.x + 1, y: center.y + 1 },
+                    Block{ x: center.x, y: center.y + 1 },
+                    Block{ x: center.x, y: center.y + 2 },
+                ]
+            } else {
+                vec![center.clone()] // TODO
+            },
+            ShapeSpecies::Hat => if rotation == 0 {
+                vec![
+                    center.clone(),
+                    Block{ x: center.x - 1, y: center.y + 1 },
+                    Block{ x: center.x, y: center.y + 1 },
+                    Block{ x: center.x + 1, y: center.y + 1 },
+                ]
+            } else if rotation == 1 {
+                vec![center.clone()] // TODO
+            } else if rotation == 2 {
+                vec![center.clone()] // TODO
+            } else {
+                vec![center.clone()] // TODO
+            },
+        }
+    }
+
+    fn rotate(&mut self, board: &Board) -> bool {
+        let new_rot = if self.rotation >= 3 { 0 } else { self.rotation + 1 };
+        // TODO: track center separately (and indealy with a pointer)
+        let new_blocks = Shape::blocks_for(self.species.clone(), &self.blocks[0], new_rot);
+        for block in &new_blocks {
+            if !board.valid_move(&block) {
+                return false;
+            }
+        }
+        self.rotation = new_rot;
+        self.blocks = new_blocks;
+        true
+    }
+
+    fn move_down(&mut self, board: &mut Board) -> bool {
+        for block in &self.blocks {
+            if block.y + 1 >= BOARD_HEIGHT || board.is_filled(block.x, block.y+1) {
+                board.emplace(&self);
+                return false;
+            }
+        }
+        for block in &mut self.blocks {
+            block.y += 1;
+        }
+        true
+    }
+
+    fn drop(&mut self, board: &mut Board) {
+        while self.move_down(board) {
+            
+        }
+    }
+
+    fn move_right(&mut self, board: &Board) -> bool {
+        for block in &self.blocks {
+            if block.x + 1 >= BOARD_WIDTH || board.is_filled(block.x + 1, block.y) {
+                return false;
+            }
+        }
+
+        for block in &mut self.blocks {
+            block.x += 1;
+        }
+        return true;
+    }
+
+    fn move_left(&mut self, board: &Board) -> bool {
+        for block in &self.blocks {
+            if block.x == 0 || board.is_filled(block.x - 1, block.y) {
+                return false;
+            }
+        }
+
+        for block in &mut self.blocks {
+            block.x -= 1;
+        }
+        return true;
     }
 }
