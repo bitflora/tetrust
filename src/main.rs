@@ -251,81 +251,24 @@ fn render_board(board: &Board, buffer: &mut Vec<u32>, curr_shape: &Shape) {
 impl Shape {
     fn random(start: &Block, rng: &mut ThreadRng) -> Shape {
         let c: Color = rng.gen();
-        let r = rng.gen_range(0..7);
+        const SHAPE: [ShapeSpecies; 7] = [
+            ShapeSpecies::Line,
+            ShapeSpecies::Square,
+            ShapeSpecies::LRight,
+            ShapeSpecies::LLeft,
+            ShapeSpecies::SquiggleRight,
+            ShapeSpecies::SquiggleLeft,
+            ShapeSpecies::Hat,
+        ];
+        let r = rng.gen_range(0..SHAPE.len());
+        let chosen = SHAPE[r].clone();
         println!("shape: {r}");
-        return match r {
-            0 => Shape::line(&start, c),
-            1 => Shape::square(&start, c),
-            2 => Shape::l_right(&start, c),
-            3 => Shape::l_left(&start, c),
-            4 => Shape::squiggle_right(&start, c),
-            5 => Shape::squiggle_left(&start, c),
-            6 => Shape::hat(&start, c),
-            _ => Shape::line(&start, c),
-        };
-    }
-
-    fn line(center: &Block, color: Color) -> Shape {
-        return Shape {
-            species: ShapeSpecies::Line,
-            blocks: Shape::blocks_for(ShapeSpecies::Line, center, 0),
-            color: color,
+        Shape {
+            species: chosen.clone(),
+            blocks: Shape::blocks_for(chosen, &start, 0),
+            color: c,
             rotation: 0,
-        };
-    }
-
-    fn square(upperleft: &Block, color: Color) -> Shape {
-        return Shape {
-            species: ShapeSpecies::Square,
-            blocks: Shape::blocks_for(ShapeSpecies::Square, upperleft, 0),
-            color: color,
-            rotation: 0,
-        };
-    }
-
-    fn l_right(center: &Block, color: Color) -> Shape {
-        return Shape {
-            species: ShapeSpecies::LRight,
-            blocks: Shape::blocks_for(ShapeSpecies::LRight, center, 0),
-            color: color,
-            rotation: 0,
-        };
-    }
-
-    fn l_left(center: &Block, color: Color) -> Shape {
-        return Shape {
-            species: ShapeSpecies::LLeft,
-            blocks: Shape::blocks_for(ShapeSpecies::LLeft, center, 0),
-            color: color,
-            rotation: 0,
-        };
-    }
-
-    fn squiggle_right(center: &Block, color: Color) -> Shape {
-        return Shape {
-            species: ShapeSpecies::SquiggleRight,
-            blocks: Shape::blocks_for(ShapeSpecies::SquiggleRight, center, 0),
-            color: color,
-            rotation: 0,
-        };
-    }
-
-    fn squiggle_left(center: &Block, color: Color) -> Shape {
-        return Shape {
-            species: ShapeSpecies::SquiggleLeft,
-            blocks: Shape::blocks_for(ShapeSpecies::SquiggleLeft, center, 0),
-            color: color,
-            rotation: 0,
-        };
-    }
-
-    fn hat(center: &Block, color: Color) -> Shape {
-        return Shape {
-            species: ShapeSpecies::Hat,
-            blocks: Shape::blocks_for(ShapeSpecies::Hat, center, 0),
-            color: color,
-            rotation: 0,
-        };
+        }
     }
 
     fn blocks_for(species: ShapeSpecies, center: &Block, rotation: Rotation) -> Vec<Block> {
@@ -383,7 +326,7 @@ impl Shape {
                         Block{ x: center.x, y: center.y - 1 },
                     ]
                 },
-            ShapeSpecies::LLeft =>
+            ShapeSpecies::LLeft => // These states are not in the right order
                 if rotation == 0 {
                     vec![
                         Block{ x: center.x - 1, y: center.y + 1 },
@@ -410,7 +353,7 @@ impl Shape {
                         Block{ x: center.x + 1, y: center.y - 1 },
                         Block{ x: center.x + 1, y: center.y },
                         Block{ x: center.x + 1, y: center.y + 1 },
-                        Block{ x: center.x, y: center.y + 1 },
+                        Block{ x: center.x, y: center.y - 1 },
                     ]
                 },
             ShapeSpecies::SquiggleRight =>
