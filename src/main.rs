@@ -1,4 +1,4 @@
-use std::{collections::btree_map::Range, thread::{current, sleep}, time::{Duration, SystemTime}};
+use std::{thread::sleep, time::{Duration, SystemTime}};
 use rand::{rngs::ThreadRng, Rng};
 use minifb::{Key, KeyRepeat, Window, WindowOptions};
 
@@ -110,7 +110,7 @@ impl Board {
 
     fn valid_move(&self, block: &Block) -> bool {
         return !( !Board::PLAYABLE_WIDTH.contains(&block.x)
-            || block.y < 0 || block.y >= BOARD_HEIGHT
+            || block.y >= BOARD_HEIGHT
             || self.is_filled(block.x, block.y))
     }
 }
