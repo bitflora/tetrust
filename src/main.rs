@@ -50,6 +50,7 @@ impl Board {
 
     const PLAYABLE_WIDTH : std::ops::Range<usize> = 1..BOARD_WIDTH-1;
     const PLAYABLE_HEIGHT : std::ops::Range<usize> = 1..BOARD_HEIGHT-1;
+    const DOOM_ROW: usize = 1;
 
     fn check_rows(&mut self) -> u32 {
         let mut rows_removed: u32 = 0;
@@ -61,7 +62,7 @@ impl Board {
             }
             true
         };
-        for row in 0..BOARD_HEIGHT-1 {
+        for row in Board::PLAYABLE_HEIGHT {
             if full_row( &self, row) {
                 // TODO: scoring
                 rows_removed += 1;
@@ -77,11 +78,21 @@ impl Board {
         }
         rows_removed
     }
-    fn emplace(&mut self, shape: &Shape) {
+
+    fn is_dead(&self) -> bool {
+        for x in Board::PLAYABLE_WIDTH {
+            if self.is_filled(x, Board::DOOM_ROW) {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn emplace(&mut self, shape: &Shape) -> u32 {
         for b in &shape.blocks {
             self.set_block(&b, shape.color);
         }
-        self.check_rows();
+        self.check_rows()
     }
 
     fn set_block(&mut self, b: &Block, val: Color) {
@@ -190,6 +201,11 @@ fn main() {
                 }
             },
             Err(_) => {},
+        }
+
+        if board.is_dead() {
+            // TODO: a more glorious death
+            running = false;
         }
 
         sleep(SLEEP_DURATION);
