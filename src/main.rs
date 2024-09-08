@@ -1,11 +1,11 @@
-use std::{thread::{current, sleep}, time::{Duration, SystemTime}};
+use std::{collections::btree_map::Range, thread::{current, sleep}, time::{Duration, SystemTime}};
 use rand::{rngs::ThreadRng, Rng};
 use minifb::{Key, KeyRepeat, Window, WindowOptions};
 
 const TICK_DURATION: Duration = Duration::from_secs(1);
 const SLEEP_DURATION: Duration = Duration::from_millis(10);
 
-const BOARD_WIDTH: usize = 10;
+const BOARD_WIDTH: usize = 12;
 const BOARD_HEIGHT: usize = 25;
 
 const SQUARE_SIZE: usize = 30;
@@ -31,32 +31,45 @@ struct Board {
 
 impl Default for Board {
     fn default() -> Board {
-        Board { data: vec![0; BOARD_WIDTH * BOARD_HEIGHT] }
+        let mut ret = Board { data: vec![0; BOARD_WIDTH * BOARD_HEIGHT] };
+        // A lot is easier if we have hard-coded borders that we never mess with.
+        let white: Color = 0xffffff;
+        for i in 0..BOARD_HEIGHT {
+            ret.set_block(&Block{x:0, y: i}, white);
+            ret.set_block(&Block{x:BOARD_WIDTH-1, y: i}, white);
+        }
+        for x in 0..BOARD_WIDTH {
+            ret.set_block(&Block{x: x, y: BOARD_HEIGHT-1}, white);
+        }
+        ret
     }
 }
 
 impl Board {
     const BLANK: Color = 0x000000;
 
+    const PLAYABLE_WIDTH : std::ops::Range<usize> = 1..BOARD_WIDTH-1;
+    const PLAYABLE_HEIGHT : std::ops::Range<usize> = 1..BOARD_HEIGHT-1;
+
     fn check_rows(&mut self) -> u32 {
         let mut rows_removed: u32 = 0;
         let full_row = |board: &Board, row: usize| {
-            for x in 0..BOARD_WIDTH {
+            for x in Board::PLAYABLE_WIDTH {
                 if ! board.is_filled(x, row) {
                     return false;
                 }
             }
             true
         };
-        for row in 0..BOARD_HEIGHT {
+        for row in 0..BOARD_HEIGHT-1 {
             if full_row( &self, row) {
                 // TODO: scoring
                 rows_removed += 1;
-                for x in 0..BOARD_WIDTH {
+                for x in Board::PLAYABLE_WIDTH {
                     self.set_block(&Block{x: x, y: row}, Board::BLANK);
                 }
                 for prev_row in (1..=row).rev() {
-                    for x in 0..BOARD_WIDTH {
+                    for x in Board::PLAYABLE_WIDTH {
                         self.set_block(&Block{x: x, y: prev_row}, self.color_at(x, prev_row-1));
                     }
                 }
@@ -85,7 +98,7 @@ impl Board {
     }
 
     fn valid_move(&self, block: &Block) -> bool {
-        return !( block.x < 0 || block.x >= BOARD_WIDTH
+        return !( !Board::PLAYABLE_WIDTH.contains(&block.x)
             || block.y < 0 || block.y >= BOARD_HEIGHT
             || self.is_filled(block.x, block.y))
     }
@@ -127,9 +140,9 @@ fn main() {
     // but then I'd need to change all my types and cast a lot
     let top_center = Block{ x: BOARD_WIDTH / 2, y: 1};
 
-    board.set_block(&Block{ x: 3, y: BOARD_HEIGHT-1}, rng.gen());
-    board.set_block(&Block{ x: 5, y: BOARD_HEIGHT-2}, rng.gen());
-    board.set_block(&Block{ x: 5, y: BOARD_HEIGHT-5}, rng.gen());
+    // board.set_block(&Block{ x: 3, y: BOARD_HEIGHT-1}, rng.gen());
+    // board.set_block(&Block{ x: 5, y: BOARD_HEIGHT-2}, rng.gen());
+    // board.set_block(&Block{ x: 5, y: BOARD_HEIGHT-5}, rng.gen());
 
     let mut running = true;
 
