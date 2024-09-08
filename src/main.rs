@@ -353,7 +353,7 @@ impl Shape {
                     Block{ x: center.x, y: center.y + 1 },
                     Block{ x: center.x + 1, y: center.y + 1 },
                 ],
-            ShapeSpecies::LRight =>
+            ShapeSpecies::LRight => // Can currently climb back up
                 if rotation == 0 {
                     vec![
                         Block{ x: center.x - 1, y: center.y + 1 },
@@ -383,7 +383,7 @@ impl Shape {
                         Block{ x: center.x, y: center.y - 1 },
                     ]
                 },
-            ShapeSpecies::LLeft => 
+            ShapeSpecies::LLeft =>
                 if rotation == 0 {
                     vec![
                         Block{ x: center.x - 1, y: center.y + 1 },
@@ -392,46 +392,89 @@ impl Shape {
                         Block{ x: center.x - 1, y: center.y },
                     ]
                 } else if rotation == 1 {
-                    vec![center.clone()] // TODO
+                    vec![
+                        Block{ x: center.x + 1, y: center.y - 1 },
+                        Block{ x: center.x + 1, y: center.y },
+                        Block{ x: center.x + 1, y: center.y + 1 },
+                        Block{ x: center.x, y: center.y + 1 },
+                    ]
                 } else if rotation == 2 {
-                    vec![center.clone()] // TODO
+                    vec![
+                        Block{ x: center.x - 1, y: center.y - 1 },
+                        Block{ x: center.x, y: center.y - 1 },
+                        Block{ x: center.x + 1, y: center.y - 1 },
+                        Block{ x: center.x + 1, y: center.y },
+                    ]
                 } else {
-                    vec![center.clone()] // TODO
+                    vec![
+                        Block{ x: center.x + 1, y: center.y - 1 },
+                        Block{ x: center.x + 1, y: center.y },
+                        Block{ x: center.x + 1, y: center.y + 1 },
+                        Block{ x: center.x, y: center.y + 1 },
+                    ]
                 },
-            ShapeSpecies::SquiggleRight => if rotation % 2 == 0 {
-                vec![
-                    Block{ x: center.x - 1, y: center.y },
-                    Block{ x: center.x - 1, y: center.y + 1 },
-                    Block{ x: center.x, y: center.y + 1 },
-                    Block{ x: center.x, y: center.y + 2 },
-                ]
-            } else {
-                vec![center.clone()] // TODO
-            },
-            ShapeSpecies::SquiggleLeft => if rotation % 2 == 0 {
-                vec![
-                    Block{ x: center.x + 1, y: center.y },
-                    Block{ x: center.x + 1, y: center.y + 1 },
-                    Block{ x: center.x, y: center.y + 1 },
-                    Block{ x: center.x, y: center.y + 2 },
-                ]
-            } else {
-                vec![center.clone()] // TODO
-            },
-            ShapeSpecies::Hat => if rotation == 0 {
-                vec![
-                    center.clone(),
-                    Block{ x: center.x - 1, y: center.y + 1 },
-                    Block{ x: center.x, y: center.y + 1 },
-                    Block{ x: center.x + 1, y: center.y + 1 },
-                ]
-            } else if rotation == 1 {
-                vec![center.clone()] // TODO
-            } else if rotation == 2 {
-                vec![center.clone()] // TODO
-            } else {
-                vec![center.clone()] // TODO
-            },
+            ShapeSpecies::SquiggleRight =>
+                if rotation % 2 == 0 {
+                    vec![
+                        Block{ x: center.x - 1, y: center.y },
+                        Block{ x: center.x - 1, y: center.y + 1 },
+                        Block{ x: center.x, y: center.y + 1 },
+                        Block{ x: center.x, y: center.y + 2 },
+                    ]
+                } else {
+                    vec![
+                        center.clone(),
+                        Block{ x: center.x + 1, y: center.y },
+                        Block{ x: center.x, y: center.y + 1 },
+                        Block{ x: center.x - 1, y: center.y + 1 },
+                    ]
+                },
+            ShapeSpecies::SquiggleLeft =>
+                if rotation % 2 == 0 {
+                    vec![
+                        Block{ x: center.x + 1, y: center.y },
+                        Block{ x: center.x + 1, y: center.y + 1 },
+                        Block{ x: center.x, y: center.y + 1 },
+                        Block{ x: center.x, y: center.y + 2 },
+                    ]
+                } else {
+                    vec![
+                        center.clone(),
+                        Block{ x: center.x - 1, y: center.y },
+                        Block{ x: center.x, y: center.y + 1 },
+                        Block{ x: center.x + 1, y: center.y + 1 },
+                    ]
+                },
+            ShapeSpecies::Hat => 
+                if rotation == 0 {
+                    vec![
+                        center.clone(),
+                        Block{ x: center.x - 1, y: center.y },
+                        Block{ x: center.x, y: center.y - 1 },
+                        Block{ x: center.x + 1, y: center.y },
+                    ]
+                } else if rotation == 1 {
+                    vec![
+                        center.clone(),
+                        Block{ x: center.x, y: center.y - 1 },
+                        Block{ x: center.x + 1, y: center.y },
+                        Block{ x: center.x, y: center.y + 1 },
+                    ]
+                } else if rotation == 2 {
+                    vec![
+                        center.clone(),
+                        Block{ x: center.x - 1, y: center.y },
+                        Block{ x: center.x, y: center.y + 1 },
+                        Block{ x: center.x + 1, y: center.y },
+                    ]
+                } else {
+                    vec![
+                        center.clone(),
+                        Block{ x: center.x, y: center.y - 1 },
+                        Block{ x: center.x - 1, y: center.y },
+                        Block{ x: center.x, y: center.y + 1 },
+                    ]
+                },
         }
     }
 
