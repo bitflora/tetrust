@@ -1,4 +1,4 @@
-use std::{thread::sleep, time::{Duration, SystemTime}};
+use std::{ops::Index, ops::IndexMut, thread::sleep, time::{Duration, SystemTime}};
 use rand::{rngs::ThreadRng, Rng};
 use minifb::{Key, KeyRepeat, Window, WindowOptions};
 
@@ -26,6 +26,8 @@ impl Block {
 }
 
 struct Board {
+    // 2d matrix of all blocks on the playing board.
+    // The edges are set permanently
     data: Vec<Color>,
 }
 
@@ -35,23 +37,43 @@ impl Default for Board {
         // A lot is easier if we have hard-coded borders that we never mess with.
         let white: Color = 0xffffff;
         for i in 0..BOARD_HEIGHT {
-            ret.set_block(&Block{x:0, y: i}, white);
-            ret.set_block(&Block{x:BOARD_WIDTH-1, y: i}, white);
+            ret[&Block{x:0, y: i}] = white;
+            ret[&Block{x:BOARD_WIDTH-1, y: i}] = white;
         }
         for x in 0..BOARD_WIDTH {
-            ret.set_block(&Block{x: x, y: BOARD_HEIGHT-1}, white);
+            ret[&Block{x: x, y: BOARD_HEIGHT-1}] = white;
         }
         ret
     }
 }
 
+// overload []
+impl Index<&Block> for Board {
+    type Output = Color;
+    fn index(&self, index: &Block) -> &Color {
+        &self.data[index.y*BOARD_WIDTH + index.x]
+    }
+}
+
+// overload []=
+impl IndexMut<&Block> for Board {
+    fn index_mut(&mut self, index: &Block) -> &mut Self::Output {
+        &mut self.data[index.y * BOARD_WIDTH + index.x]
+    }
+}
+
 impl Board {
+    // black blocks are empty
     const BLANK: Color = 0x000000;
 
+    // the space between the hard-coded borders
     const PLAYABLE_WIDTH : std::ops::Range<usize> = 1..BOARD_WIDTH-1;
     const PLAYABLE_HEIGHT : std::ops::Range<usize> = 1..BOARD_HEIGHT-1;
+    // If you land on this row, you lose
     const DOOM_ROW: usize = 1;
 
+
+    // See if there are any complete rows and if so, remove them
     fn check_rows(&mut self) -> u32 {
         let mut rows_removed: u32 = 0;
         let full_row = |board: &Board, row: usize| {
@@ -79,6 +101,7 @@ impl Board {
         rows_removed
     }
 
+    // Did the player lose?
     fn is_dead(&self) -> bool {
         for x in Board::PLAYABLE_WIDTH {
             if self.is_filled(x, Board::DOOM_ROW) {
@@ -88,6 +111,7 @@ impl Board {
         false
     }
 
+    // Place the shape onto the board
     fn emplace(&mut self, shape: &Shape) -> u32 {
         for b in &shape.blocks {
             self.set_block(&b, shape.color);
@@ -95,11 +119,12 @@ impl Board {
         self.check_rows()
     }
 
+    // []= provides the same functionality
     fn set_block(&mut self, b: &Block, val: Color) {
         self.data[b.y * BOARD_WIDTH + b.x] = val;
     }
 
-    // TODO: maybe overload []
+    // [] provides the same functionality
     fn color_at(&self, x: usize, y: usize) -> Color {
         self.data[y*BOARD_WIDTH + x]
     }
@@ -117,7 +142,6 @@ impl Board {
 
 
 // TODO: learn more about cool ways to do enum stuff
-
 #[derive(Clone)]
 enum ShapeSpecies {
     Line,
@@ -150,10 +174,6 @@ fn main() {
     // I'd prefer to allow the shape to rotate into the negative space,
     // but then I'd need to change all my types and cast a lot
     let top_center = Block{ x: BOARD_WIDTH / 2, y: 1};
-
-    // board.set_block(&Block{ x: 3, y: BOARD_HEIGHT-1}, rng.gen());
-    // board.set_block(&Block{ x: 5, y: BOARD_HEIGHT-2}, rng.gen());
-    // board.set_block(&Block{ x: 5, y: BOARD_HEIGHT-5}, rng.gen());
 
     let mut running = true;
 
@@ -326,7 +346,7 @@ impl Shape {
                         Block{ x: center.x, y: center.y - 1 },
                     ]
                 },
-            ShapeSpecies::LLeft => // These states are not in the right order
+            ShapeSpecies::LLeft =>
                 if rotation == 0 {
                     vec![
                         Block{ x: center.x - 1, y: center.y + 1 },
@@ -336,10 +356,10 @@ impl Shape {
                     ]
                 } else if rotation == 1 {
                     vec![
-                        Block{ x: center.x + 1, y: center.y - 1 },
-                        Block{ x: center.x + 1, y: center.y },
-                        Block{ x: center.x + 1, y: center.y + 1 },
+                        Block{ x: center.x, y: center.y - 1 },
+                        center.clone(),
                         Block{ x: center.x, y: center.y + 1 },
+                        Block{ x: center.x + 1, y: center.y - 1 },
                     ]
                 } else if rotation == 2 {
                     vec![
