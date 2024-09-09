@@ -161,10 +161,9 @@ struct Shape {
     species: ShapeSpecies,
     blocks: Vec<Block>,
     color: Color,
-    center: Block,
+    center: Block, // without this, rotations get wonky
     rotation: Rotation, // Sure would be nice if I could default this
 }
-
 
 fn main() {
     let mut board: Board = Board::default();
@@ -175,10 +174,9 @@ fn main() {
     // I'd prefer to allow the shape to rotate into the negative space,
     // but then I'd need to change all my types and cast a lot
     let top_center = Block{ x: BOARD_WIDTH / 2, y: 1};
+    let mut curr_shape: Shape = Shape::random(&top_center, &mut rng);
 
     let mut running = true;
-
-    let mut curr_shape: Shape = Shape::random(&top_center, &mut rng);
 
     let mut tick_start = SystemTime::now();
     while running {
@@ -243,7 +241,6 @@ fn init_window() -> Window {
     .unwrap_or_else(|e| {
         panic!("Window creation failed: {}", e);
     });
-
     window
 }
 
@@ -262,12 +259,10 @@ fn render_board(board: &Board, buffer: &mut Vec<u32>, curr_shape: &Shape) {
             draw_block(x, y, color);
         }
     }
-
     for block in &curr_shape.blocks {
         draw_block(block.x, block.y, curr_shape.color);
     }
 }
-
 
 impl Shape {
     fn random(start: &Block, rng: &mut ThreadRng) -> Shape {
@@ -444,8 +439,8 @@ impl Shape {
     }
 
     fn rotate_right(&mut self, board: &Board) -> bool {
+        debug_assert!(self.rotation <= 3);
         let new_rot = if self.rotation >= 3 { 0 } else { self.rotation + 1 };
-        // TODO: track center separately (and indealy with a pointer)
         let new_blocks = Shape::blocks_for(self.species.clone(), &self.center, new_rot);
         for block in &new_blocks {
             if !board.valid_move(&block) {
