@@ -161,6 +161,7 @@ struct Shape {
     species: ShapeSpecies,
     blocks: Vec<Block>,
     color: Color,
+    center: Block,
     rotation: Rotation, // Sure would be nice if I could default this
 }
 
@@ -287,6 +288,7 @@ impl Shape {
             species: chosen.clone(),
             blocks: Shape::blocks_for(chosen, &start, 0),
             color: c,
+            center: *start,
             rotation: 0,
         }
     }
@@ -316,7 +318,7 @@ impl Shape {
                     Block{ x: center.x, y: center.y + 1 },
                     Block{ x: center.x + 1, y: center.y + 1 },
                 ],
-            ShapeSpecies::LRight => // Can currently climb back up
+            ShapeSpecies::LRight =>
                 if rotation == 0 {
                     vec![
                         Block{ x: center.x - 1, y: center.y + 1 },
@@ -373,7 +375,7 @@ impl Shape {
                         Block{ x: center.x + 1, y: center.y - 1 },
                         Block{ x: center.x + 1, y: center.y },
                         Block{ x: center.x + 1, y: center.y + 1 },
-                        Block{ x: center.x, y: center.y - 1 },
+                        Block{ x: center.x, y: center.y + 1 },
                     ]
                 },
             ShapeSpecies::SquiggleRight =>
@@ -444,7 +446,7 @@ impl Shape {
     fn rotate_right(&mut self, board: &Board) -> bool {
         let new_rot = if self.rotation >= 3 { 0 } else { self.rotation + 1 };
         // TODO: track center separately (and indealy with a pointer)
-        let new_blocks = Shape::blocks_for(self.species.clone(), &self.blocks[0], new_rot);
+        let new_blocks = Shape::blocks_for(self.species.clone(), &self.center, new_rot);
         for block in &new_blocks {
             if !board.valid_move(&block) {
                 return false;
@@ -465,6 +467,7 @@ impl Shape {
         for block in &mut self.blocks {
             block.y += 1;
         }
+        self.center.y += 1;
         true
     }
 
@@ -482,6 +485,7 @@ impl Shape {
         for block in &mut self.blocks {
             block.x += 1;
         }
+        self.center.x += 1;
         return true;
     }
 
@@ -495,6 +499,7 @@ impl Shape {
         for block in &mut self.blocks {
             block.x -= 1;
         }
+        self.center.x -= 1;
         return true;
     }
 }
